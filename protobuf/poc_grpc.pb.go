@@ -17,7 +17,8 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GetServiceClient interface {
-	Get(ctx context.Context, in *Request, opts ...grpc.CallOption) (GetService_GetClient, error)
+	Get(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error)
+	GetStream(ctx context.Context, in *Request, opts ...grpc.CallOption) (GetService_GetStreamClient, error)
 }
 
 type getServiceClient struct {
@@ -28,12 +29,21 @@ func NewGetServiceClient(cc grpc.ClientConnInterface) GetServiceClient {
 	return &getServiceClient{cc}
 }
 
-func (c *getServiceClient) Get(ctx context.Context, in *Request, opts ...grpc.CallOption) (GetService_GetClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_GetService_serviceDesc.Streams[0], "/protobuf.GetService/Get", opts...)
+func (c *getServiceClient) Get(ctx context.Context, in *Request, opts ...grpc.CallOption) (*Response, error) {
+	out := new(Response)
+	err := c.cc.Invoke(ctx, "/protobuf.GetService/Get", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &getServiceGetClient{stream}
+	return out, nil
+}
+
+func (c *getServiceClient) GetStream(ctx context.Context, in *Request, opts ...grpc.CallOption) (GetService_GetStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &_GetService_serviceDesc.Streams[0], "/protobuf.GetService/GetStream", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &getServiceGetStreamClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -43,16 +53,16 @@ func (c *getServiceClient) Get(ctx context.Context, in *Request, opts ...grpc.Ca
 	return x, nil
 }
 
-type GetService_GetClient interface {
+type GetService_GetStreamClient interface {
 	Recv() (*Response, error)
 	grpc.ClientStream
 }
 
-type getServiceGetClient struct {
+type getServiceGetStreamClient struct {
 	grpc.ClientStream
 }
 
-func (x *getServiceGetClient) Recv() (*Response, error) {
+func (x *getServiceGetStreamClient) Recv() (*Response, error) {
 	m := new(Response)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -64,7 +74,8 @@ func (x *getServiceGetClient) Recv() (*Response, error) {
 // All implementations must embed UnimplementedGetServiceServer
 // for forward compatibility
 type GetServiceServer interface {
-	Get(*Request, GetService_GetServer) error
+	Get(context.Context, *Request) (*Response, error)
+	GetStream(*Request, GetService_GetStreamServer) error
 	mustEmbedUnimplementedGetServiceServer()
 }
 
@@ -72,8 +83,11 @@ type GetServiceServer interface {
 type UnimplementedGetServiceServer struct {
 }
 
-func (UnimplementedGetServiceServer) Get(*Request, GetService_GetServer) error {
-	return status.Errorf(codes.Unimplemented, "method Get not implemented")
+func (UnimplementedGetServiceServer) Get(context.Context, *Request) (*Response, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Get not implemented")
+}
+func (UnimplementedGetServiceServer) GetStream(*Request, GetService_GetStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetStream not implemented")
 }
 func (UnimplementedGetServiceServer) mustEmbedUnimplementedGetServiceServer() {}
 
@@ -88,35 +102,58 @@ func RegisterGetServiceServer(s *grpc.Server, srv GetServiceServer) {
 	s.RegisterService(&_GetService_serviceDesc, srv)
 }
 
-func _GetService_Get_Handler(srv interface{}, stream grpc.ServerStream) error {
+func _GetService_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Request)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GetServiceServer).Get(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/protobuf.GetService/Get",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GetServiceServer).Get(ctx, req.(*Request))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _GetService_GetStream_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(Request)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(GetServiceServer).Get(m, &getServiceGetServer{stream})
+	return srv.(GetServiceServer).GetStream(m, &getServiceGetStreamServer{stream})
 }
 
-type GetService_GetServer interface {
+type GetService_GetStreamServer interface {
 	Send(*Response) error
 	grpc.ServerStream
 }
 
-type getServiceGetServer struct {
+type getServiceGetStreamServer struct {
 	grpc.ServerStream
 }
 
-func (x *getServiceGetServer) Send(m *Response) error {
+func (x *getServiceGetStreamServer) Send(m *Response) error {
 	return x.ServerStream.SendMsg(m)
 }
 
 var _GetService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "protobuf.GetService",
 	HandlerType: (*GetServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Get",
+			Handler:    _GetService_Get_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "Get",
-			Handler:       _GetService_Get_Handler,
+			StreamName:    "GetStream",
+			Handler:       _GetService_GetStream_Handler,
 			ServerStreams: true,
 		},
 	},

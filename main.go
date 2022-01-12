@@ -13,7 +13,14 @@ func main() {
 
 	time.Sleep(3 * time.Second)
 
-	fmt.Println("running client requests")
+	fmt.Println("-----------------------------------------")
+	fmt.Println("running stream client requests")
+	RunStreamClient()
+	fmt.Println("stream client done")
+	fmt.Println("-----------------------------------------")
+	fmt.Println("-----------------------------------------")
+	fmt.Println("running get client requests")
 	RunClient()
-	fmt.Println("done")
+	fmt.Println("get client done")
+	fmt.Println("-----------------------------------------")
 }
