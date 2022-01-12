@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+package protobuf;
+
+service GetService {
+  rpc Get (Request) returns (stream Response) {}
+}
+
+message Request {
+  int32 count = 1;
+}
+
+message Response {
+  int32 id = 1;
+}
